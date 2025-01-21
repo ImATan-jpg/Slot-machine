@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slot Machine</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #282c34;
+            color: white;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .slot-machine {
+            text-align: center;
+            display: none;
+        }
+
+        .reel-container {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            overflow: hidden;
+            margin: 5px;
+            position: relative;
+            border: 2px solid #fff;
+            border-radius: 5px;
+            background: #333;
+        }
+
+        .reel {
+            position: absolute;
+            width: 100%;
+            font-size: 24px;
+            line-height: 60px;
+            font-family: 'Arial', sans-serif;
+        }
+
+        @keyframes roll {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(-180px); }
+        }
+
+        .rolling {
+            animation: roll 0.5s ease-in-out;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 28px;
+            margin: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: #fff;
+            background-image: linear-gradient(to bottom right, #00c6ff, #0072ff);
+            border: none;
+            border-radius: 40px;
+            box-shadow: 0px 4px 0px #0072ff;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0px 6px 0px #0072ff;
+        }
+
+        .button:active {
+            transform: translateY(0px);
+            box-shadow: none;
+            background-image: linear-gradient(to bottom right, #0072ff, #00c6ff);
+        }
+
+        .button:before,
+        .button:after {
+            content: "";
+            position: absolute;
+            width: 0;
+            height: 0;
+        }
+
+        .button:before {
+            top: -3px;
+            left: -3px;
+            border-radius: 40px;
+            border-top: 3px solid #fff;
+            border-left: 3px solid #fff;
+        }
+
+        .button:after {
+            bottom: -3px;
+            right: -3px;
+            border-radius: 40px;
+            border-bottom: 3px solid #fff;
+            border-right: 3px solid #fff;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+
+        #balance {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .bet-input {
+            font-size: 18px;
+            padding: 5px;
+            margin: 5px;
+            width: 100px;
+            text-align: center;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #282c34;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .loader {
+            position: relative;
+            width: 96px;
+            height: 96px;
+            transform: rotate(45deg);
+        }
+
+        .loader-square {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 28px;
+            height: 28px;
+            margin: 2px;
+            border-radius: 0px;
+            background: white;
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            animation: square-animation 10s ease-in-out infinite both;
+        }
+
+        @keyframes square-animation {
+            0% { left: 0; top: 0; }
+            10.5% { left: 0; top: 0; }
+            12.5% { left: 32px; top: 0; }
+            23% { left: 32px; top: 0; }
+            25% { left: 64px; top: 0; }
+            35.5% { left: 64px; top: 0; }
+            37.5% { left: 64px; top: 32px; }
+            48% { left: 64px; top: 32px; }
+            50% { left: 32px; top: 32px; }
+            60.5% { left: 32px; top: 32px; }
+            62.5% { left: 32px; top: 64px; }
+            73% { left: 32px; top: 64px; }
+            75% { left: 0; top: 64px; }
+            85.5% { left: 0; top: 64px; }
+            87.5% { left: 0; top: 32px; }
+            98% { left: 0; top: 32px; }
+            100% { left: 0; top: 0; }
+        }
+
+        .loader-square:nth-of-type(0) { animation-delay: 0s; }
+        .loader-square:nth-of-type(1) { animation-delay: -1.4285714286s; }
+        .loader-square:nth-of-type(2) { animation-delay: -2.8571428571s; }
+        .loader-square:nth-of-type(3) { animation-delay: -4.2857142857s; }
+        .loader-square:nth-of-type(4) { animation-delay: -5.7142857143s; }
+        .loader-square:nth-of-type(5) { animation-delay: -7.1428571429s; }
+        .loader-square:nth-of-type(6) { animation-delay: -8.5714285714s; }
+        .loader-square:nth-of-type(7) { animation-delay: -10s; }
+    </style>
+</head>
+<body>
+    <div id="loading-screen" class="loading-screen">
+        <div class="loader">
+            <div class="loader-square"></div>
+            <div class="loader-square"></div>
+            <div class="loader-square"></div>
+            <div class="loader-square"></div>
+            <div class="loader-square"></div>
+            <div class="loader-square"></div>
+            <div class="loader-square"></div>
+            <div class="loader-square"></div>
+        </div>
+    </div>
+
+    <div class="slot-machine">
+        <div id="balance">Balance: $100</div>
+        <div>
+            <input class="bet-input" id="betAmount" type="number" min="1" max="100" value="10" />
+            <button class="button" onclick="spin()">Spin</button>
+        </div>
+        <div class="reel-container">
+            <div class="reel" id="reel1"></div>
+        </div>
+        <div class="reel-container">
+            <div class="reel" id="reel2"></div>
+        </div>
+        <div class="reel-container">
+            <div class="reel" id="reel3"></div>
+        </div>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const symbols = ['🍒', '🍋', '🍊', '🍉', '🍇', '🍓'];
+        let balance = 100;
+
+        function triggerConfetti() {
+            // First burst
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+
+            // Multiple bursts
+            let end = Date.now() + (1 * 1000);
+
+            let interval = setInterval(function() {
+                if (Date.now() > end) {
+                    return clearInterval(interval);
+                }
+
+                confetti({
+                    particleCount: 50,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 }
+                });
+                confetti({
+                    particleCount: 50,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 }
+                });
+            }, 250);
+        }
+
+        function getWeightedSymbol() {
+            const rand = Math.random();
+            if (rand < 0.4) return symbols[0];
+            if (rand < 0.7) return symbols[1];
+            if (rand < 0.85) return symbols[2];
+            if (rand < 0.93) return symbols[3];
+            if (rand < 0.97) return symbols[4];
+            return symbols[5];
+        }
+
+        function spin() {
+            const reel1 = document.getElementById('reel1');
+            const reel2 = document.getElementById('reel2');
+            const reel3 = document.getElementById('reel3');
+            const result = document.getElementById('result');
+            const betAmountInput = document.getElementById('betAmount');
+            const balanceDisplay = document.getElementById('balance');
+
+            const betAmount = parseInt(betAmountInput.value, 10);
+
+            if (isNaN(betAmount) || betAmount <= 0 || betAmount > balance) {
+                result.textContent = 'Invalid bet amount!';
+                return;
+            }
+
+            balance -= betAmount;
+            balanceDisplay.textContent = `Balance: $${balance}`;
+
+            reel1.innerHTML = '';
+            reel2.innerHTML = '';
+            reel3.innerHTML = '';
+
+            const symbolsToShow = [getWeightedSymbol(), getWeightedSymbol(), getWeightedSymbol()];
+
+            for (let i = 0; i < 6; i++) {
+                reel1.innerHTML += `<div>${symbols[i % symbols.length]}</div>`;
+                reel2.innerHTML += `<div>${symbols[i % symbols.length]}</div>`;
+                reel3.innerHTML += `<div>${symbols[i % symbols.length]}</div>`;
+            }
+
+            reel1.classList.add('rolling');
+            reel2.classList.add('rolling');
+            reel3.classList.add('rolling');
+
+            setTimeout(() => {
+                reel1.classList.remove('rolling');
+                reel2.classList.remove('rolling');
+                reel3.classList.remove('rolling');
+
+                reel1.innerHTML = `<div>${symbolsToShow[0]}</div>`;
+                reel2.innerHTML = `<div>${symbolsToShow[1]}</div>`;
+                reel3.innerHTML = `<div>${symbolsToShow[2]}</div>`;
+
+                if (symbolsToShow[0] === symbolsToShow[1] && symbolsToShow[1] === symbolsToShow[2]) {
+                    let multiplier;
+                    switch (symbolsToShow[0]) {
+                        case '🍒': multiplier = 3; break;
+                        case '🍋': multiplier = 5; break;
+                        case '🍊': multiplier = 8; break;
+                        case '🍉': multiplier = 10; break;
+                        case '🍇': multiplier = 15; break;
+                        case '🍓': multiplier = 25; break;
+                    }
+                    const winAmount = betAmount * multiplier;
+                    result.textContent = `Jackpot! You won $${winAmount}! (${multiplier}x)`;
+                    balance += winAmount;
+                    triggerConfetti();
+                } else if (symbolsToShow[0] === symbolsToShow[1] || 
+                          symbolsToShow[1] === symbolsToShow[2] || 
+                          symbolsToShow[0] === symbolsToShow[2]) {
+                    const winAmount = Math.floor(betAmount * 1.5);
+                    result.textContent = `Small Win! You won $${winAmount}!`;
+                    balance += winAmount;
+                } else {
+                    result.textContent = 'Try Again!';
+                }
+
+                balanceDisplay.textContent = `Balance: $${balance}`;
+
+                if (balance <= 0) {
+                    document.querySelector('.button').disabled = true;
+                    document.querySelector('.button').style.backgroundColor = '#555';
+                    result.textContent = 'Game Over! Refresh the page to play again.';
+                }
+            }, 500);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                const loadingScreen = document.getElementById('loading-screen');
+                const slotMachine = document.querySelector('.slot-machine');
+                
+                loadingScreen.style.opacity = '0';
+                slotMachine.style.display = 'block';
+                
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 500);
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
